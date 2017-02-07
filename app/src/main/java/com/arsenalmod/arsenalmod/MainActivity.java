@@ -10,7 +10,9 @@ import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -23,6 +25,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -33,17 +36,23 @@ import static android.bluetooth.BluetoothAdapter.*;
 import static android.bluetooth.BluetoothManager.*;
 
 public class MainActivity extends AppCompatActivity {
-
+    // Views, Lists and constant data
     private static final int REQUEST_ENABLE_BT = 1;
+    private static final int  SCAN_PERIOD = 2500;
     private static final String TAG = "MainActivity";
     private ListView mListOfDevicesView;
     List<BtleDevice> deviceList = new ArrayList<>();
     private Button scanButton;
+    private ProgressBar scanProgressBar;
+    private boolean scanClicked = true;
 
+    // Bluetooth Objects
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothManager mBluetoothManager;
     private BluetoothLeScanner mLEScanner;
-//    private LeScanCallback mScanCallback;
+
+    // Thread for scanning
+    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Initialize ScanCallback
     ScanCallback mScanCallback = new ScanCallback() {
+        // This is where the device information comes in
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             Log.i("callbackType", String.valueOf(callbackType));
@@ -96,6 +106,12 @@ public class MainActivity extends AppCompatActivity {
         // initialize mLeScanner
         mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
 
+        // Create thread to handle scanning
+        mHandler = new Handler();
+
+        scanProgressBar = (ProgressBar)findViewById(R.id.scan_progress_bar);
+
+        // Scan Button Pressed
         scanButton = (Button)findViewById(R.id.scan_button);
         scanButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -104,27 +120,56 @@ public class MainActivity extends AppCompatActivity {
                 if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
                     Intent enableBtIntent = new Intent(ACTION_REQUEST_ENABLE);
                     startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-                }
-                else{
-                    // if not initialized, initialize it here
-//                    if (mLEScanner == null) {
-//                        mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
-//                    }
-
+                    scanProgressBar.setVisibility(View.INVISIBLE);
+                } else {
                     // Ask for location permission before scanning for BT devices. Google is weird.
                     int MY_PERMISSIONS_REQUEST_BTLE = 0;
                     int permissionCheck = ContextCompat.checkSelfPermission(MainActivity.this,
                             ACCESS_FINE_LOCATION);
                     if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
                         //Request access
-                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{
+                                        Manifest.permission.ACCESS_FINE_LOCATION},
                                 MY_PERMISSIONS_REQUEST_BTLE);
                     }
-                    // Start a scan
-                    mLEScanner.startScan(mScanCallback);
+
+                    if (scanClicked) {
+
+                        // Start Progress Bar Spinning
+                        scanProgressBar.setVisibility(View.VISIBLE);
+                        scanButton.setText("Stop");
+
+                        // Start a scan
+                        scanForDevices(true);
+                    }
+                    else {
+                        // Stop Progress Bar Spinning
+                        scanProgressBar.setVisibility(View.GONE);
+                        scanButton.setText(R.string.scan_button_text);
+
+                        // Stop a scan
+                        scanForDevices(false);
+                    }
+                    scanClicked ^= true;
                 }
             }
         });
+    }
+
+    private void scanForDevices(final boolean enable) {
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (enable) {
+                        mLEScanner.startScan(mScanCallback);
+                        scanProgressBar.setVisibility(View.GONE);
+                        scanButton.setText(R.string.scan_button_text);
+                    }
+                    else {
+                        mLEScanner.stopScan(mScanCallback);
+                    }
+                }
+            }, SCAN_PERIOD);
     }
 
     @Override
