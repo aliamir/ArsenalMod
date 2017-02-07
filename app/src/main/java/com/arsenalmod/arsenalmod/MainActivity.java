@@ -4,7 +4,6 @@ import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanRecord;
@@ -12,7 +11,6 @@ import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
@@ -35,12 +33,11 @@ import java.util.List;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.bluetooth.BluetoothAdapter.*;
-import static android.bluetooth.BluetoothManager.*;
 
 public class MainActivity extends AppCompatActivity {
     // Views, Lists and constant data
     private static final int REQUEST_ENABLE_BT = 1;
-    private static final int  SCAN_PERIOD = 2500;
+    private static final int  SCAN_PERIOD = 5000;
     private static final String TAG = "MainActivity";
     private ListView mListOfDevicesView;
     List<BtleDevice> deviceList = new ArrayList<>();
@@ -80,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Initialize ScanCallback
     ScanCallback mScanCallback = new ScanCallback() {
-        boolean saveFlag = false;
+        boolean saveFlag = true;
 
         // This is where the device information comes in
         @Override
@@ -95,19 +92,25 @@ public class MainActivity extends AppCompatActivity {
             BtleDevice dAdd = new BtleDevice(btDevice.getName(), btDevice.getAddress());
 
             /* We want to avoid adding duplicate devices since a scan will constantly
-             * show the devices on the list. We will only store unique devices by address
+             * show the devices on the list. We will only store unique devices by address. If
+             * the List is empty, we will add the first device found and not go through an
+             * empty List.
              */
-           for (int i = 0; i < deviceList.size(); i++) {
-               if (btDevice.getAddress().equals(deviceList.get(i).getAddress()))
-               {
-                   saveFlag = false;
-                   break;
-               }
-               else {
-                   // Add device
-                   saveFlag = true;
-               }
-           }
+            if (deviceList.size() > 0) {
+                for (int i = 0; i < deviceList.size(); i++) {
+                    if (btDevice.getAddress().equals(deviceList.get(i).getAddress())) {
+                       saveFlag = false;
+                       break;
+                    }
+                    else {
+                        // Add device
+                        saveFlag = true;
+                   }
+                }
+            }
+            else {
+                saveFlag = true;
+            }
 
             if (saveFlag) {
                 deviceList.add(dAdd);
@@ -169,14 +172,17 @@ public class MainActivity extends AppCompatActivity {
 
                         // Start Progress Bar Spinning
                         scanProgressBar.setVisibility(View.VISIBLE);
-                        scanButton.setText("Stop");
+                        scanButton.setText(R.string.stop_scan_button_text);
+
+                        // Clear old list of devices
+                        deviceList.clear();
 
                         // Start a scan
                         scanForDevices(true);
                     } else {
                         // Stop Progress Bar Spinning
                         scanProgressBar.setVisibility(View.GONE);
-                        scanButton.setText(R.string.scan_button_text);
+                        scanButton.setText(R.string.start_scan_button_text);
 
                         // Stop a scan
                         scanForDevices(false);
@@ -194,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                         mLEScanner.stopScan(mScanCallback);
                         scanProgressBar.setVisibility(View.GONE);
-                        scanButton.setText(R.string.scan_button_text);
+                        scanButton.setText(R.string.start_scan_button_text);
                         scanClicked = true;
                 }
             }, SCAN_PERIOD);
@@ -228,13 +234,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showListofDevices() {
-        //Create a list
-        BtleDevice mBtleDevice = new BtleDevice("Amir", "Naqui");
-
-        deviceList.add(mBtleDevice);
-        deviceList.add(mBtleDevice);
-        deviceList.add(mBtleDevice);
-
         // Populate ListView
         ArrayAdapter<BtleDevice> adapter = new MyListAdapter();
         mListOfDevicesView = (ListView)findViewById(R.id.list_bt_devices);
