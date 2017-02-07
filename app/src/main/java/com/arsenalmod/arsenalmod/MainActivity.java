@@ -1,15 +1,24 @@
 package com.arsenalmod.arsenalmod;
 
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+    private ListView mListOfDevicesView;
+    List<BtleDevice> deviceList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,14 +27,8 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        // Create 2 item list
+        showListofDevices();
     }
 
     @Override
@@ -49,4 +52,49 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+    private void showListofDevices() {
+        mListOfDevicesView = (ListView) findViewById(R.id.list_bt_devices);
+
+        //Create a list
+        BtleDevice mBtleDevice = new BtleDevice("Amir", "Naqui");
+
+        deviceList.add(mBtleDevice);
+        deviceList.add(mBtleDevice);
+        deviceList.add(mBtleDevice);
+
+        // Populate ListView
+        ArrayAdapter<BtleDevice> adapter = new MyListAdapter();
+        ListView list = (ListView)findViewById(R.id.list_bt_devices);
+        list.setAdapter(adapter);
+    }
+
+    private class MyListAdapter extends ArrayAdapter<BtleDevice> {
+        public MyListAdapter() {
+            super(MainActivity.this, R.layout.list_devices, deviceList);
+        }
+
+        @Override
+        public View getView(int position, View convertedView, ViewGroup parent) {
+            // Make sure we have a view to use
+            View itemView = convertedView;
+            if (itemView == null) {
+                itemView = getLayoutInflater().inflate(R.layout.list_devices, parent, false);
+            }
+
+            // Find the device
+            BtleDevice currentDevice = deviceList.get(position);
+
+            // Fill the View (show the data from the BtleDevice class
+            TextView dNameText = (TextView)(itemView.findViewById(R.id.name));
+            dNameText.setText(currentDevice.getName());
+
+            TextView dAddressText = (TextView)itemView.findViewById(R.id.address);
+            dAddressText.setText(currentDevice.getAddress());
+
+            // Return the View
+            return itemView;
+        }
+    }
 }
+
