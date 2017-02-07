@@ -1,5 +1,10 @@
 package com.arsenalmod.arsenalmod;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -8,17 +13,23 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.bluetooth.BluetoothManager.*;
+
 public class MainActivity extends AppCompatActivity {
 
+    private static final int REQUEST_ENABLE_BT = 1;
     private static final String TAG = "MainActivity";
     private ListView mListOfDevicesView;
     List<BtleDevice> deviceList = new ArrayList<>();
+    private Button scanButton;
+    private BluetoothAdapter mBluetoothAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,9 +37,29 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        // TODO: Check if BTLE is supported
+        HandleBtleScan();
 
         // Create 2 item list
         showListofDevices();
+    }
+
+    private void HandleBtleScan() {
+        // Setup BT manager and adapter to use BT
+        BluetoothManager mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        mBluetoothAdapter = mBluetoothManager.getAdapter();
+
+        scanButton = (Button)findViewById(R.id.scan_button);
+        scanButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                // If BT is off, request to turn it on
+                if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
+                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+                }
+
+            }
+        });
     }
 
     @Override
@@ -54,8 +85,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showListofDevices() {
-        mListOfDevicesView = (ListView) findViewById(R.id.list_bt_devices);
-
         //Create a list
         BtleDevice mBtleDevice = new BtleDevice("Amir", "Naqui");
 
@@ -65,8 +94,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Populate ListView
         ArrayAdapter<BtleDevice> adapter = new MyListAdapter();
-        ListView list = (ListView)findViewById(R.id.list_bt_devices);
-        list.setAdapter(adapter);
+        mListOfDevicesView = (ListView)findViewById(R.id.list_bt_devices);
+        mListOfDevicesView.setAdapter(adapter);
     }
 
     private class MyListAdapter extends ArrayAdapter<BtleDevice> {
