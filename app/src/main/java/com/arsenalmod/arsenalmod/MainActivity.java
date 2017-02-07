@@ -1,13 +1,21 @@
 package com.arsenalmod.arsenalmod;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,6 +28,8 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.bluetooth.BluetoothAdapter.*;
 import static android.bluetooth.BluetoothManager.*;
 
 public class MainActivity extends AppCompatActivity {
@@ -29,7 +39,11 @@ public class MainActivity extends AppCompatActivity {
     private ListView mListOfDevicesView;
     List<BtleDevice> deviceList = new ArrayList<>();
     private Button scanButton;
+
     private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothManager mBluetoothManager;
+    private BluetoothLeScanner mLEScanner;
+//    private LeScanCallback mScanCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,20 +58,71 @@ public class MainActivity extends AppCompatActivity {
         showListofDevices();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        mBluetoothAdapter = mBluetoothManager.getAdapter();
+        mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
+    }
+
+    // Initialize ScanCallback
+    ScanCallback mScanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            Log.i("callbackType", String.valueOf(callbackType));
+            Log.i("result", result.toString());
+//                BluetoothDevice btDevice = result.getDevice();
+//                connectToDevice(btDevice);
+        }
+
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            for (ScanResult sr : results) {
+                Log.i("ScanResult - Results", sr.toString());
+            }
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            Log.e("Scan Failed", "Error Code: " + errorCode);
+        }
+    };
+
     private void HandleBtleScan() {
         // Setup BT manager and adapter to use BT
-        BluetoothManager mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = mBluetoothManager.getAdapter();
+        // initialize mLeScanner
+        mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
 
         scanButton = (Button)findViewById(R.id.scan_button);
         scanButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+
                 // If BT is off, request to turn it on
                 if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
-                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    Intent enableBtIntent = new Intent(ACTION_REQUEST_ENABLE);
                     startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
                 }
+                else{
+                    // if not initialized, initialize it here
+//                    if (mLEScanner == null) {
+//                        mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
+//                    }
 
+                    // Ask for location permission before scanning for BT devices. Google is weird.
+                    int MY_PERMISSIONS_REQUEST_BTLE = 0;
+                    int permissionCheck = ContextCompat.checkSelfPermission(MainActivity.this,
+                            ACCESS_FINE_LOCATION);
+                    if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+                        //Request access
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                MY_PERMISSIONS_REQUEST_BTLE);
+                    }
+                    // Start a scan
+                    mLEScanner.startScan(mScanCallback);
+                }
             }
         });
     }
