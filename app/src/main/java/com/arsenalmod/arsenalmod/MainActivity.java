@@ -4,8 +4,10 @@ import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
@@ -50,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothManager mBluetoothManager;
     private BluetoothLeScanner mLEScanner;
+    private ScanRecord mScanRecord;
 
     // Thread for scanning
     private Handler mHandler;
@@ -77,12 +80,41 @@ public class MainActivity extends AppCompatActivity {
 
     // Initialize ScanCallback
     ScanCallback mScanCallback = new ScanCallback() {
+        boolean saveFlag = false;
+
         // This is where the device information comes in
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             Log.i("callbackType", String.valueOf(callbackType));
             Log.i("result", result.toString());
-//                BluetoothDevice btDevice = result.getDevice();
+
+            // Create device to store the device data
+            BluetoothDevice btDevice = result.getDevice();
+
+            // Create the class that is used to display the data via ListView
+            BtleDevice dAdd = new BtleDevice(btDevice.getName(), btDevice.getAddress());
+
+            /* We want to avoid adding duplicate devices since a scan will constantly
+             * show the devices on the list. We will only store unique devices by address
+             */
+           for (int i = 0; i < deviceList.size(); i++) {
+               if (btDevice.getAddress().equals(deviceList.get(i).getAddress()))
+               {
+                   saveFlag = false;
+                   break;
+               }
+               else {
+                   // Add device
+                   saveFlag = true;
+               }
+           }
+
+            if (saveFlag) {
+                deviceList.add(dAdd);
+            }
+
+            // Refresh the list of devices
+            mListOfDevicesView.invalidateViews();
 //                connectToDevice(btDevice);
         }
 
@@ -141,8 +173,7 @@ public class MainActivity extends AppCompatActivity {
 
                         // Start a scan
                         scanForDevices(true);
-                    }
-                    else {
+                    } else {
                         // Stop Progress Bar Spinning
                         scanProgressBar.setVisibility(View.GONE);
                         scanButton.setText(R.string.scan_button_text);
@@ -157,19 +188,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void scanForDevices(final boolean enable) {
+        if (enable) {
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    if (enable) {
-                        mLEScanner.startScan(mScanCallback);
+                        mLEScanner.stopScan(mScanCallback);
                         scanProgressBar.setVisibility(View.GONE);
                         scanButton.setText(R.string.scan_button_text);
-                    }
-                    else {
-                        mLEScanner.stopScan(mScanCallback);
-                    }
+                        scanClicked = true;
                 }
             }, SCAN_PERIOD);
+            mLEScanner.startScan(mScanCallback);
+        }
+        else {
+            mLEScanner.stopScan(mScanCallback);
+        }
     }
 
     @Override
