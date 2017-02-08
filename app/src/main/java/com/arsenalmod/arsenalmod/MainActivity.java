@@ -22,17 +22,20 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.bluetooth.BluetoothAdapter.*;
+import static android.widget.Toast.*;
 
 public class MainActivity extends AppCompatActivity {
     // Views, Lists and constant data
@@ -40,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int  SCAN_PERIOD = 5000;
     private static final String TAG = "MainActivity";
     private ListView mListOfDevicesView;
-    List<BtleDevice> deviceList = new ArrayList<>();
+    List<BluetoothDevice> deviceList = new ArrayList<>();
     private Button scanButton;
     private ProgressBar scanProgressBar;
     private boolean scanClicked = true;
@@ -60,11 +63,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
         // TODO: Check if BTLE is supported
+
+
         HandleBtleScan();
 
         // Create 2 item list
         showListofDevices();
+
+        // Handle Clicked devices to connect to
+        clickedDevicesFromList();
     }
 
     @Override
@@ -88,15 +97,10 @@ public class MainActivity extends AppCompatActivity {
             // Create device to store the device data
             BluetoothDevice btDevice = result.getDevice();
 
-            // Create the class that is used to display the data via ListView
-            BtleDevice dAdd = new BtleDevice(btDevice.getName(), btDevice.getAddress());
-
-            /* We want to avoid adding duplicate devices since a scan will constantly
-             * show the devices on the list. We will only store unique devices by address. If
-             * the List is empty, we will add the first device found and not go through an
-             * empty List.
-             */
-            if (deviceList.size() > 0) {
+            if (deviceList.size() == 0) {
+                saveFlag = true;
+            }
+            else {
                 for (int i = 0; i < deviceList.size(); i++) {
                     if (btDevice.getAddress().equals(deviceList.get(i).getAddress())) {
                        saveFlag = false;
@@ -108,12 +112,9 @@ public class MainActivity extends AppCompatActivity {
                    }
                 }
             }
-            else {
-                saveFlag = true;
-            }
 
             if (saveFlag) {
-                deviceList.add(dAdd);
+                deviceList.add(btDevice);
             }
 
             // Refresh the list of devices
@@ -198,10 +199,11 @@ public class MainActivity extends AppCompatActivity {
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                        mLEScanner.stopScan(mScanCallback);
-                        scanProgressBar.setVisibility(View.GONE);
-                        scanButton.setText(R.string.start_scan_button_text);
-                        scanClicked = true;
+                mLEScanner.stopScan(mScanCallback);
+                scanProgressBar.setVisibility(View.GONE);
+                scanButton.setText(R.string.start_scan_button_text);
+                scanClicked = true;
+                mLEScanner.stopScan(mScanCallback);
                 }
             }, SCAN_PERIOD);
             mLEScanner.startScan(mScanCallback);
@@ -235,12 +237,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void showListofDevices() {
         // Populate ListView
-        ArrayAdapter<BtleDevice> adapter = new MyListAdapter();
+        ArrayAdapter<BluetoothDevice> adapter = new MyListAdapter();
         mListOfDevicesView = (ListView)findViewById(R.id.list_bt_devices);
         mListOfDevicesView.setAdapter(adapter);
     }
 
-    private class MyListAdapter extends ArrayAdapter<BtleDevice> {
+    private class MyListAdapter extends ArrayAdapter<BluetoothDevice> {
         public MyListAdapter() {
             super(MainActivity.this, R.layout.list_devices, deviceList);
         }
@@ -254,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             // Find the device
-            BtleDevice currentDevice = deviceList.get(position);
+            BluetoothDevice currentDevice = deviceList.get(position);
 
             // Fill the View (show the data from the BtleDevice class
             TextView dNameText = (TextView)(itemView.findViewById(R.id.name));
@@ -266,6 +268,17 @@ public class MainActivity extends AppCompatActivity {
             // Return the View
             return itemView;
         }
+    }
+
+    private void clickedDevicesFromList() {
+        mListOfDevicesView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                BluetoothDevice deviceClicked = deviceList.get(position);
+                String message = "You selected " + deviceClicked.getName() + " with address: " + deviceClicked.getAddress();
+                makeText(MainActivity.this, message, LENGTH_LONG).show();
+            }
+        });
     }
 }
 

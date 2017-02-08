@@ -35,11 +35,12 @@
         android:layout_alignTop="@+id/scan_button" />
 
     <ProgressBar
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/scan_progress_bar"
-        android:visibility="invisible"
-        android:layout_above="@+id/list_bt_devices"
-        android:layout_toStartOf="@+id/scan_button" />
+    style="?android:attr/progressTintMode"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:id="@+id/scan_progress_bar"
+    android:visibility="invisible"
+    android:layout_above="@+id/list_bt_devices"
+    android:layout_toStartOf="@+id/scan_button" />
 
 </RelativeLayout>
