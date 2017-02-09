@@ -1,9 +1,18 @@
 package com.arsenalmod.arsenalmod;
 
 import android.app.IntentService;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
 import android.content.Context;
+import android.os.Bundle;
 import android.util.Log;
+
+import java.util.List;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
@@ -13,6 +22,9 @@ import android.util.Log;
  * helper methods.
  */
 public class BtleConnectionService extends IntentService {
+    private BluetoothDevice mBluetoothDevice;
+    private BluetoothGatt mGatt;
+
     // TODO: Rename actions, choose action names that describe tasks that this
     // IntentService can perform, e.g. ACTION_FETCH_NEW_ITEMS
     private static final String ACTION_FOO = "com.arsenalmod.arsenalmod.action.FOO";
@@ -22,12 +34,16 @@ public class BtleConnectionService extends IntentService {
     private static final String EXTRA_PARAM1 = "com.arsenalmod.arsenalmod.extra.PARAM1";
     private static final String EXTRA_PARAM2 = "com.arsenalmod.arsenalmod.extra.PARAM2";
 
-    /**
+    /******************* LEFT THIS FROM ORIGINAL FILE GENERATION ******************
+     * This service starts new services based on the request that has come in from
+     * the activity. */
+
+    /*
      * Starts this service to perform action Foo with the given parameters. If
      * the service is already performing a task this action will be queued.
      *
      * @see IntentService
-     */
+
     // TODO: Customize helper method
     public static void startActionFoo(Context context, String param1, String param2) {
         Intent intent = new Intent(context, BtleConnectionService.class);
@@ -36,21 +52,10 @@ public class BtleConnectionService extends IntentService {
         intent.putExtra(EXTRA_PARAM2, param2);
         context.startService(intent);
     }
+    */
 
-    /**
-     * Starts this service to perform action Baz with the given parameters. If
-     * the service is already performing a task this action will be queued.
-     *
-     * @see IntentService
-     */
-    // TODO: Customize helper method
-    public static void startActionBaz(Context context, String param1, String param2) {
-        Intent intent = new Intent(context, BtleConnectionService.class);
-        intent.setAction(ACTION_BAZ);
-        intent.putExtra(EXTRA_PARAM1, param1);
-        intent.putExtra(EXTRA_PARAM2, param2);
-        context.startService(intent);
-    }
+    /******************* LEFT THIS FROM ORIGINAL FILE GENERATION ******************/
+
 
     public BtleConnectionService() {
         super("BtleConnectionService");
@@ -59,18 +64,6 @@ public class BtleConnectionService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         Log.e("BtleConnectionService", "Service Started!");
-        if (intent != null) {
-            final String action = intent.getAction();
-            if (ACTION_FOO.equals(action)) {
-                final String param1 = intent.getStringExtra(EXTRA_PARAM1);
-                final String param2 = intent.getStringExtra(EXTRA_PARAM2);
-                handleActionFoo(param1, param2);
-            } else if (ACTION_BAZ.equals(action)) {
-                final String param1 = intent.getStringExtra(EXTRA_PARAM1);
-                final String param2 = intent.getStringExtra(EXTRA_PARAM2);
-                handleActionBaz(param1, param2);
-            }
-        }
 
         /* ActivityMain will connect to the device and this service must maintain the connection.
          * Service must:
@@ -78,9 +71,14 @@ public class BtleConnectionService extends IntentService {
          * - Notify activity that connection has been lost to restart a connection
          * - ACK to activity for each send/receive of commands
          * - Notify activity that service has been killed */
-        String passedConnectionCmd = intent.getStringExtra("start_connection");
-        Log.e("BtleConnectionService", "From ActivityMain: " + passedConnectionCmd);
-
+        //getIntent().getExtras().getParcelable("btdevice");
+        Bundle b = intent.getExtras();
+        if (b != null) {
+            mBluetoothDevice = b.getParcelable("bleDevice");
+        }
+        //mBluetoothDevice = intent.getSerializableExtra("bleDevice");
+        Log.e("BtleConnectionService", "From ActivityMain: " + mBluetoothDevice.getName());
+        connectToDevice(mBluetoothDevice);
         // Initialize BLE objects
 
         // Check connection to device
@@ -89,26 +87,50 @@ public class BtleConnectionService extends IntentService {
 
         /* To broadcast back to activity:
          * Intent i = new Intent(ACK_XXX_CMD);
-          * BtleConnectionService.this.sendBroadcast(i);
+          * BleConnectionService.this.sendBroadcast(i);
           * ACK_XXX_CMD = the ACK of the command sent over the BLE connection
           * */
     }
 
-    /**
-     * Handle action Foo in the provided background thread with the provided
-     * parameters.
-     */
-    private void handleActionFoo(String param1, String param2) {
-        // TODO: Handle action Foo
-        throw new UnsupportedOperationException("Not yet implemented");
+
+    private void connectToDevice(BluetoothDevice device) {
+        if (mGatt == null) {
+            mGatt = device.connectGatt(this, false, gattCallback);
+        }
     }
 
-    /**
-     * Handle action Baz in the provided background thread with the provided
-     * parameters.
-     */
-    private void handleActionBaz(String param1, String param2) {
-        // TODO: Handle action Baz
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
+    private final BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            Log.i("onConnectionStateChange", "Status: " + status);
+            switch (newState) {
+                case BluetoothProfile.STATE_CONNECTED:
+                    Log.i("gattCallback", "STATE_CONNECTED");
+                    gatt.discoverServices();
+                    break;
+                case BluetoothProfile.STATE_DISCONNECTED:
+                    Log.e("gattCallback", "STATE_DISCONNECTED");
+                    break;
+                default:
+                    Log.e("gattCallback", "STATE_OTHER");
+            }
+
+        }
+
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            List<BluetoothGattService> services = gatt.getServices();
+            Log.i("onServicesDiscovered", services.toString());
+//            gatt.readCharacteristic(services.get(1).getCharacteristics().get
+//                    (0));
+        }
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic
+                                                 characteristic, int status) {
+            Log.i("onCharacteristicRead", characteristic.toString());
+            gatt.disconnect();
+        }
+    };
 }
