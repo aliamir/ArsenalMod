@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.arsenalmod.arsenalmod" >
 
+    <!-- Require BTLE hardware be available so the app store will filter by BLE devices -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+
+    <!-- BLE devices need Bluetooth and location permissions. Why location? don't know -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -23,6 +27,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ConnectedDeviceActivity"
+            android:label="@string/title_activity_connected_device"
+            android:theme="@style/AppTheme.NoActionBar" >
+        </activity>
+
+        <service
+            android:name=".BtleConnectionService"
+            android:exported="false" >
+        </service>
     </application>
 
 </manifest>

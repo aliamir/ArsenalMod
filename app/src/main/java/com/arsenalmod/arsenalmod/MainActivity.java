@@ -287,7 +287,8 @@ public class MainActivity extends AppCompatActivity {
                 // Connect to the device before starting a new activity to interact with the device
                 connectToDevice(deviceClicked);
 
-                // Start new activity
+                // Start connection service (exciting stuff!)
+                startBtleConnectionService();
             }
         });
     }
@@ -332,5 +333,13 @@ public class MainActivity extends AppCompatActivity {
             gatt.disconnect();
         }
     };
+
+    public void startBtleConnectionService() {
+        Intent intent = new Intent(this, BtleConnectionService.class);
+
+        intent.putExtra("start_connection", "test");
+
+        this.startService(intent);
+    }
 }
 
