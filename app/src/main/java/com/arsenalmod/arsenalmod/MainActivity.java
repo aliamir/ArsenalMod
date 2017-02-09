@@ -3,7 +3,12 @@ package com.arsenalmod.arsenalmod;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanRecord;
@@ -47,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private Button scanButton;
     private ProgressBar scanProgressBar;
     private boolean scanClicked = true;
+    private BluetoothGatt mGatt;
 
     // Bluetooth Objects
     private BluetoothAdapter mBluetoothAdapter;
@@ -107,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
                        break;
                     }
                     else {
-                        // Add device
+                        // Add device to List
                         saveFlag = true;
                    }
                 }
@@ -119,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Refresh the list of devices
             mListOfDevicesView.invalidateViews();
-//                connectToDevice(btDevice);
+//          connectToDevice(btDevice);
         }
 
         @Override
@@ -277,8 +283,54 @@ public class MainActivity extends AppCompatActivity {
                 BluetoothDevice deviceClicked = deviceList.get(position);
                 String message = "You selected " + deviceClicked.getName() + " with address: " + deviceClicked.getAddress();
                 makeText(MainActivity.this, message, LENGTH_LONG).show();
+
+                // Connect to the device before starting a new activity to interact with the device
+                connectToDevice(deviceClicked);
+
+                // Start new activity
             }
         });
     }
+
+    private void connectToDevice(BluetoothDevice device) {
+        if (mGatt == null) {
+            mGatt = device.connectGatt(this, false, gattCallback);
+        }
+    }
+
+    private final BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            Log.i("onConnectionStateChange", "Status: " + status);
+            switch (newState) {
+                case BluetoothProfile.STATE_CONNECTED:
+                    Log.i("gattCallback", "STATE_CONNECTED");
+                    gatt.discoverServices();
+                    break;
+                case BluetoothProfile.STATE_DISCONNECTED:
+                    Log.e("gattCallback", "STATE_DISCONNECTED");
+                    break;
+                default:
+                    Log.e("gattCallback", "STATE_OTHER");
+            }
+
+        }
+
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            List<BluetoothGattService> services = gatt.getServices();
+            Log.i("onServicesDiscovered", services.toString());
+//            gatt.readCharacteristic(services.get(1).getCharacteristics().get
+//                    (0));
+        }
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic
+                                                 characteristic, int status) {
+            Log.i("onCharacteristicRead", characteristic.toString());
+            gatt.disconnect();
+        }
+    };
 }
 
