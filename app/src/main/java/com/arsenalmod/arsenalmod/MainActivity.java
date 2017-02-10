@@ -81,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // TODO: check if connected to device already
         mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = mBluetoothManager.getAdapter();
         mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
@@ -281,11 +280,11 @@ public class MainActivity extends AppCompatActivity {
                 String message = "You selected " + deviceClicked.getName() + " with address: " + deviceClicked.getAddress();
                 makeText(MainActivity.this, message, LENGTH_LONG).show();
 
-                // Connect to the device before starting a new activity to interact with the device
-                //connectToDevice(deviceClicked);
-
                 // Start connection service (exciting stuff!)
                 startBtleConnectionService(deviceClicked);
+
+                // Start new activity
+                startConnectedActivity(deviceClicked);
             }
         });
     }
@@ -295,10 +294,23 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, BtleConnectionService.class);
         Bundle b = new Bundle();
 
-        b.putParcelable("bleDevice", device);
+        BtleDevice cmds = new BtleDevice(null, null);
+        b.putParcelable(cmds.serviceStrings[0], device);
         intent.putExtras(b);
 
         this.startService(intent);
+    }
+
+    private void startConnectedActivity(BluetoothDevice device) {
+        Intent intent = new Intent(this, ConnectedDeviceActivity.class);
+        Bundle b = new Bundle();
+
+        //pass BluetoothDevice to new activity (maybe not needed)
+        BtleDevice cmds = new BtleDevice(null, null);
+        b.putParcelable(cmds.serviceStrings[0], device);
+        intent.putExtras(b);
+
+        startActivity(intent);
     }
 }
 

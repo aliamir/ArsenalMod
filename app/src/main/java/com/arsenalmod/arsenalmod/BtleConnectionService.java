@@ -72,12 +72,13 @@ public class BtleConnectionService extends IntentService {
          * - ACK to activity for each send/receive of commands
          * - Notify activity that service has been killed */
         //getIntent().getExtras().getParcelable("btdevice");
+        BtleDevice cmds = new BtleDevice(null, null);
         Bundle b = intent.getExtras();
         if (b != null) {
-            mBluetoothDevice = b.getParcelable("bleDevice");
+            mBluetoothDevice = b.getParcelable(cmds.serviceStrings[0]);
         }
-        //mBluetoothDevice = intent.getSerializableExtra("bleDevice");
-        Log.e("BtleConnectionService", "From ActivityMain: " + mBluetoothDevice.getName());
+
+        Log.e("BtleConnectionService", "Connected to Device: " + mBluetoothDevice.getName());
         connectToDevice(mBluetoothDevice);
         // Initialize BLE objects
 
