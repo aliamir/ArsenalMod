@@ -100,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
             BluetoothDevice btDevice = result.getDevice();
 
             if (deviceList.size() == 0) {
-                saveFlag = true;
+                saveFlag = false;
             }
             else {
                 for (int i = 0; i < deviceList.size(); i++) {
@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             // Refresh the list of devices
-            mListOfDevicesView.invalidateViews();
+
 //          connectToDevice(btDevice);
         }
 
@@ -182,6 +182,7 @@ public class MainActivity extends AppCompatActivity {
 
                         // Start a scan
                         scanForDevices(true);
+
                     } else {
                         // Stop Progress Bar Spinning
                         scanProgressBar.setVisibility(View.GONE);
@@ -206,6 +207,16 @@ public class MainActivity extends AppCompatActivity {
                 scanButton.setText(R.string.start_scan_button_text);
                 scanClicked = true;
                 mLEScanner.stopScan(mScanCallback);
+                    /******** TEST ********/
+                    Context context = getApplicationContext();
+                    //CharSequence text = deviceList.get(0).getName();
+                    CharSequence text = "Hello World!";
+                    int duration = Toast.LENGTH_LONG;
+
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+
+                    /******** TEST ********/
                 }
             }, SCAN_PERIOD);
             mLEScanner.startScan(mScanCallback);
